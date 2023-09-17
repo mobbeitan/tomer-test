@@ -34,7 +34,7 @@ jobs:
         shell: bash -l {0}
       
       - name: Run Mobb on the findings and get fixes
-        if: always()
+        if: failure()
         uses: mobb-dev/action@v1
         with:
           report-file: "cx_result.json"
