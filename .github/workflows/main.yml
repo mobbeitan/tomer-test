@@ -1,44 +1,40 @@
-on: [pull_request]
-permissions:
-      actions: write
-      checks: write
-      contents: write
+# Mobb/Snyk Fixer on pull requests
+# This workflow defines the needed steps to run Snyk Code on every pull request and pass the results to Mobb Fixer.
+#
+# Secrets in use (add your missing ones):
+# SNYK_API_TOKEN - your Snyk user credentials (find how to get it here: https://docs.snyk.io/getting-started/how-to-obtain-and-authenticate-with-your-snyk-api-token)
+# MOBB_API_TOKEN - your mobb user credentials (autumatially set if you forked this repo via the Mobb app)
+# GITHUB_TOKEN - automatically set by GitHub
+
+name: "Mobb/Snyk"
+
+on:
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  scan-and-fix:
+    name: Scan with Snyk and fix with Mobb
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 360
+    permissions:
       pull-requests: write
       statuses: write
-      
-jobs:
-  Checkmarx-Mobb-example:
-    runs-on: ubuntu-latest
-    name: Fix Checkmarx findings with Mobb
-    
+
     steps:
-      - name: Checkout repo to get code
+      - name: Checkout repository
         uses: actions/checkout@v3
-      
-      - name: Setup Node on this machine
-        uses: actions/setup-node@v3.6.0
-        with:
-          node-version: 18
-      
-      - name: Download and configure Checkmarx CLI
-        run: |
-          wget https://github.com/Checkmarx/ast-cli/releases/download/2.0.54/ast-cli_2.0.54_linux_x64.tar.gz -O checkmarx.tar.gz
-          tar -xf checkmarx.tar.gz
-          ./cx configure set --prop-name cx_apikey --prop-value ${{ secrets.CX_API_KEY }}
-          ./cx configure set --prop-name cx_base_auth_uri --prop-value ${{ secrets.CX_BASE_AUTH_URI }}
-          ./cx configure set --prop-name cx_base_uri --prop-value ${{ secrets.CX_BASE_URI }}
-          ./cx configure set --prop-name cx_tenant --prop-value ${{ secrets.CX_TENANT }}
+
+      - name: Run Snyk SAST scan
+        run:
+          npx snyk auth ${{ secrets.SNYK_API_TOKEN }} && npx snyk code test --sarif-file-output=/home/runner/report.json ./
         shell: bash -l {0}
-      
-      - name: Run Checkmarx SAST scan
-        run: ./cx scan create --project-name tomer-test-project -s ./ --report-format json --scan-types sast --branch nobranch  --threshold "sast-high=1" 
-        shell: bash -l {0}
-      
+
       - name: Run Mobb on the findings and get fixes
         if: always()
-        uses: mobb-dev/action@beta0.0.5
+        uses: mobb-dev/action/review@v1.1
         with:
-          report-file: "cx_result.json"
+          report-file: "/home/runner/report.json"
           api-key: ${{ secrets.MOBB_API_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          scanner: checkmarx
+          scanner: snyk
