@@ -10,7 +10,11 @@ public class SQLInjectionExample extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException {
         try {
             Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/db");
-            String user = request.getParameter("username");
+            String user = request.getParameter("username");        
+            String query = "SELECT * FROM users WHERE username = '" + user + "';";
+            Statement stmt = con.createStatement();
+
+            stmt.executeQuery(query); 
         } catch (Exception e) {
             throw new ServletException(e);
         }
