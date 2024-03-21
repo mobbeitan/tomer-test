@@ -3,3 +3,5 @@ var name = urlParams.get('name');
 
 var unsafe_div = window.document.getElementById("vulnerable-div");
 unsafe_div.innerHTML = "Hello " + name; 
+
+db.reviews.find({ $where: 'this.element == ' + name }).then(unsafe_div.innerHTML = "Hello again " + name);
